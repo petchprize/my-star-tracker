@@ -89,8 +89,8 @@
                 <input type="hidden" id="edit-id" value="">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">สำเร็จเรื่องอะไร?</label>
-                    <input type="text" id="title" required placeholder="พิมพ์เรื่องที่คุณภูมิใจ..." 
-                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <textarea id="title" required rows="4" placeholder="พิมพ์เรื่องที่คุณภูมิใจแบบละเอียดลงตรงนี้ได้เลย..." 
+                        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[80px]"></textarea>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -267,13 +267,15 @@
 
                 const card = document.createElement('div');
                 card.className = "bg-white p-4 rounded-xl shadow-xs border border-slate-100 flex justify-between items-center";
+                
+                // รองรับการแสดงผลข้อความยาวและเว้นบรรทัด (\n) ในส่วนของประวัติด้วยการใช้คลาส `whitespace-pre-line`
                 card.innerHTML = `
                     <div class="space-y-1 max-w-[65%]">
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md uppercase">${item.category}</span>
                             <span class="text-[11px] text-slate-400 font-medium">🗓️ ${dateToShow}</span>
                         </div>
-                        <p class="text-sm font-normal text-slate-700 break-words">${item.title}</p>
+                        <p class="text-sm font-normal text-slate-700 break-words whitespace-pre-line">${item.title}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="text-amber-500 font-bold text-xs bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">+${item.stars} ⭐</div>
@@ -357,10 +359,7 @@
             const level = Math.floor(totalStars / 1000) + 1;
             const starsInCurrentLevel = totalStars % 1000; 
             
-            // ด้านบนคงรูปแแบบภาษาอังกฤษ Level ไว้ตามเดิม
             document.getElementById('level-badge').innerText = `Level ${level}`;
-            
-            // เปลี่ยนภาษาไทยด้านล่างจาก ขั้นที่ -> ระดับที่
             document.getElementById('current-rank-name').innerText = `ระดับที่ ${level}`;
             document.getElementById('progress-text').innerText = `${starsInCurrentLevel.toLocaleString()} / 1,000 ดาว`;
             document.getElementById('progress-bar').style.width = `${(starsInCurrentLevel / 1000) * 100}%`;
