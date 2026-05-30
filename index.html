@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 🌟 CSS เพิ่มเติมสำหรับทำภาพกระปุกและดาวที่งอกเพิ่มได้ */
+        /* 🌟 CSS เพิ่มเติมสำหรับภาพกระปุกและแอนิเมชั่นแสงระยิบระยับ (เวอร์ชันสวยงามขึ้น) */
         #star-jar {
             position: relative;
             width: 120px; /* ขนาดกระปุก */
@@ -17,14 +17,17 @@
             border: 4px solid rgba(255, 255, 255, 0.6);
             border-radius: 20px 20px 10px 10px;
             box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-            overflow: hidden; /* ให้ดาวงอกแค่ในกระปุก */
+            overflow: hidden; 
+            /* เพิ่มพื้นผิวแก้วที่สวยงาม */
+            backdrop-filter: blur(2px);
         }
-        #star-jar::before { /* ฝากระปุก */
+        #star-jar::before { /* ฝากระปุกแบบมีมิติ */
             content: '';
             position: absolute;
-            top: 0; left: 15px; right: 15px; height: 15px;
+            top: 0; left: 15px; right: 15px; height: 18px;
             background: rgba(255, 255, 255, 0.6);
-            border-radius: 5px 5px 0 0;
+            border-radius: 6px 6px 0 0;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.4);
         }
         .jar-star {
             position: absolute;
@@ -33,8 +36,21 @@
             opacity: 0;
             animation: starAppear 0.5s ease-out forwards;
         }
+        /* 💡 แอนิเมชั่นระยิบระยับเพิ่มความสวยงาม */
+        .sparkle-dot {
+            position: absolute;
+            width: 3px; height: 3px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            opacity: 0;
+            animation: sparklePulse 1.5s ease-in-out infinite;
+        }
         @keyframes starAppear {
             to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes sparklePulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
@@ -175,7 +191,7 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "https://ctftvkbgnucvscfdfotf.supabase.co";
+        const SUPABASE_URL = "https://ctftvkbgnucvscfdfotf.supabaseco";
         const SUPABASE_KEY = "sb_publishable_zoMFda_EbeJaCSDVIzNhCQ_WzNFEdwc";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -199,7 +215,7 @@
         let currentCategory = "All";
         let searchQuery = "";
         let categoriesCache = []; 
-        let starsInJarCount = 0; // เก็ยจำนวนดาวปัจจุบันในกระปุก
+        let currentJarVisualLevel = 0; // เก็ยระดับการแสดงผลของกระปุกดาว
 
         async function checkExistingSession() {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -388,65 +404,79 @@
             if (!error && data) { let totalStars = 0; data.forEach(item => totalStars += item.stars); updateLevelDisplay(totalStars); }
         }
 
-        // 🌟 ฟังก์ชันอัปเดตเลเวล และสั่งงอกดาวในกระปุก
         function updateLevelDisplay(totalStars) {
             totalStarsEl.innerText = totalStars.toLocaleString(); 
             const level = Math.floor(totalStars / 1000) + 1;
             const starsInCurrentLevel = totalStars % 1000; 
             
-            // แก้ภาษา: ขั้น -> ระดับ
             document.getElementById('level-badge').innerText = `ระดับ ${level}`;
             document.getElementById('current-rank-name').innerText = `ระดับที่ ${level}`;
             document.getElementById('progress-text').innerText = `${starsInCurrentLevel.toLocaleString()} / 1,000 ดาว`;
             document.getElementById('progress-bar').style.width = `${(starsInCurrentLevel / 1000) * 100}%`;
 
-            // สั่งงอกดาวในกระปุกตามจำนวนจริง
-            updateStarsInJar(totalStars);
+            // ✨ หัวใจสำคัญ: อัปเดตการแสดงผลกระปุกแบบเป็นตัวแทนตามระดับ (ปลอดภัยรองรับดาวแสนดวง)
+            updateJarVisualPhased(level, totalStars);
         }
 
-        // ✨ หัวใจสำคัญ: ฟังก์ชันสั่งงอกดาวเล็กๆ ในกระปุก
-        function updateStarsInJar(totalStars) {
-            // เราจะแสดงดาวในกระปุกตามอัตราส่วน เช่น 1 ดาวจริง = 1 ดาวเล็กในกระปุก (แต่จำกัดสูงสุด 50 ดวงเพื่อความสวยงามและไม่หนักเครื่อง)
-            const targetStarCount = Math.min(totalStars, 50); 
-            
-            if (targetStarCount === starsInJarCount) return; // ถ้าจำนวนดาวเท่าเดิมไม่ต้องทำอะไร
+        // ✨ หัวใจสำคัญ: ฟังก์ชันแสดงผลดาวในกระปุกแบบคงที่/ตามระดับ (Representative & Phased)
+        // เพื่อให้รองรับข้อมูลดาวเป็นแสนๆ ดวงได้อย่างปลอดภัยโดยไม่ทำให้หน้าเว็บพัง
+        function updateJarVisualPhased(level, totalStars) {
+            // ในทางปฏิบัติ เราจะไม่แสดงผลดาวทุกดวงพร้อมกัน
+            // แต่จะใช้การแสดงผลแบบ "เป็นตัวแทนตามระดับ" แทน
+            // วิธีที่ง่ายกว่าและมีประสิทธิภาพสูงสุดคือ: แสดงจำนวนตัวเลขดาวรวม (123,456 ⭐) และปรับให้ภาพกระปุกมีดาวเต็มเสมอ (หรือตามระดับความคืบหน้าของเลเวลปัจจุบัน) และเปลี่ยนภาพกระปุกเมื่อเลเวลเพิ่มขึ้น. ผมจะเลือกทางเลือกที่สองนี้ครับ เพราะปลอดภัยที่สุดสำหรับข้อมูลระดับแสนดวง.
 
-            // ถ้ามีดาวเพิ่ม ให้สั่งงอกดาวใหม่ทีละดวงจนครบ
-            if (targetStarCount > starsInJarCount) {
-                for (let i = starsInJarCount; i < targetStarCount; i++) {
-                    createJarStar();
-                }
-            } 
-            // ถ้ามีดาวลด (เช่น ลบบันทึก) ให้ล้างกระปุกแล้ววาดใหม่ทั้งหมด
-            else {
-                starJar.innerHTML = '';
-                for (let i = 0; i < targetStarCount; i++) {
-                    createJarStar();
-                }
+            // เราจะวาดดาวเต็มครึ่งโหลเสมอ และเพิ่มแสงระยิบระยับเล็กน้อยตามระดับ
+            // วิธีนี้ปลอดภัย 100% ต่อให้มีดาวแสนดวง!
+
+            if (level === currentJarVisualLevel) return; // ถ้าเลเวลเท่าเดิมไม่ต้องทำอะไร
+
+            starJar.innerHTML = ''; // ล้างกระปุกก่อนวาดใหม่
+
+            // 1. วาดดาวเต็มครึ่งโหลเสมอ (เป็นตัวแทน)
+            for (let i = 0; i < 20; i++) { // แสดงดาวสูงสุดแค่ 20 ดวงพอเพื่อความสวยงามและไม่หนักเครื่อง
+                createJarStar();
             }
-            starsInJarCount = targetStarCount; // บันทึกจำนวนดาวล่าสุด
+
+            // 2. วาดแสงระยิบระยับเพิ่มความสวยงามตามระดับ
+            const sparkleCount = Math.min(level * 2, 30); // จำกัดสูงสุด 30 จุด
+            for (let i = 0; i < sparkleCount; i++) {
+                createSparkleDot();
+            }
+
+            currentJarVisualLevel = level; // บันทึกระดับล่าสุด
         }
 
-        // ฟังก์ชันสร้างดาวเล็กๆ 1 ดวงแบบสุ่มตำแหน่งและเวลา
         function createJarStar() {
             const star = document.createElement('div');
             star.innerText = '⭐';
             star.className = 'jar-star';
             
-            // สุ่มตำแหน่ง X (ซ้าย-ขวา) ให้อยู่กลางกระปุก
             const randomX = Math.random() * (120 - 20) + 10; 
-            
-            // สุ่มตำแหน่ง Y (บน-ล่าง) ให้ดาวค่อยๆ ตกไปกองที่ก้นกระปุก
-            // เราจะใช้ CSS Transform: translateY(0) เพื่อให้ดาวตกจากบนลงล่างตาม CSS Animation ที่เขียนไว้
             const randomY = Math.random() * (140 - 50) + 20; 
 
             star.style.left = `${randomX}px`;
-            star.style.bottom = `${randomY}px`; // กำหนดตำแหน่ง Y เป็น bottom เพื่อให้ CSS Animation เคลื่อนที่ขึ้น
-
-            // สุ่มเวลาในการเริ่มแอนิเมชั่น เพื่อให้ดาวค่อยๆ โผล่มาทีละดวง
+            star.style.bottom = `${randomY}px`;
             star.style.animationDelay = `${Math.random() * 0.5}s`;
 
             starJar.appendChild(star);
+        }
+
+        // ฟังก์ชันสร้างจุดแสงระยิบระยับ 1 จุดแบบสุ่มตำแหน่งและเวลา
+        function createSparkleDot() {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle-dot';
+            
+            const randomX = Math.random() * (120 - 10) + 5; 
+            const randomY = Math.random() * (140 - 20) + 10; 
+
+            sparkle.style.left = `${randomX}px`;
+            sparkle.style.bottom = `${randomY}px`;
+            
+            // สุ่มเวลาและระยะเวลาแอนิเมชั่น
+            sparkle.style.animationDelay = `${Math.random() * 1}s`;
+            sparkle.style.animationDuration = `${1 + Math.random() * 1}s`;
+
+            starJar.appendChild(sparkle);
         }
 
         document.getElementById('star-form').addEventListener('submit', async (e) => {
