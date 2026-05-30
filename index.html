@@ -65,6 +65,22 @@
             </div>
         </div>
 
+        <div class="bg-slate-100 p-4 rounded-2xl border border-slate-200/60 space-y-2">
+            <details class="group">
+                <summary class="text-xs font-bold text-slate-600 cursor-pointer list-none flex justify-between items-center">
+                    <span>➕ เพิ่มหมวดหมู่ความสำเร็จใหม่</span>
+                    <span class="transition-transform group-open:rotate-180">👇</span>
+                </summary>
+                <div class="pt-3 flex gap-2">
+                    <input type="text" id="new-cat-input" placeholder="เช่น 📚 การเรียนรู้ หรือ ✈️ ท่องเที่ยว" 
+                        class="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <button onclick="addNewCategory()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-medium px-4 py-2 rounded-xl transition-colors cursor-pointer whitespace-nowrap">
+                        บันทึกหมวด
+                    </button>
+                </div>
+            </details>
+        </div>
+
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
             <h2 id="form-title" class="font-bold text-lg text-slate-700 flex items-center gap-2">
                 ✍️ บันทึกความสำเร็จวันนี้
@@ -73,19 +89,13 @@
                 <input type="hidden" id="edit-id" value="">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">สำเร็จเรื่องอะไร?</label>
-                    <input type="text" id="title" required placeholder="เช่น วันนี้ออกกำลังกายต่อเนื่องได้ 30 นาที" 
+                    <input type="text" id="title" required placeholder="พิมพ์เรื่องที่คุณภูมิใจ..." 
                         class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1">หมวดหมู่</label>
-                        <select id="category" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                            <option value="💼 การงาน">💼 การงาน</option>
-                            <option value="💰 การเงิน">💰 การเงิน</option>
-                            <option value="🍏 สุขภาพ">🍏 สุขภาพ</option>
-                            <option value="❤️ ความสุขเล็กๆ">❤️ ความสุขเล็กๆ</option>
-                            <option value="🎨 งานอดิเรก">🎨 งานอดิเรก</option>
-                        </select>
+                        <select id="category" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"></select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1">สำเร็จเมื่อวันที่</label>
@@ -121,14 +131,7 @@
                     class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
             </div>
 
-            <div class="flex flex-wrap gap-2 pb-1 text-[11px]">
-                <button onclick="changeCategory('ทั้งหมด')" id="btn-cat-all" class="bg-indigo-600 text-white px-3 py-2 rounded-xl font-medium shadow-xs whitespace-nowrap cursor-pointer">ทั้งหมด</button>
-                <button onclick="changeCategory('💼 การงาน')" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">💼 การงาน</button>
-                <button onclick="changeCategory('💰 การเงิน')" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">💰 การเงิน</button>
-                <button onclick="changeCategory('🍏 สุขภาพ')" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">🍏 สุขภาพ</button>
-                <button onclick="changeCategory('❤️ ความสุขเล็กๆ')" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">❤️ ความสุขเล็กๆ</button>
-                <button onclick="changeCategory('🎨 งานอดิเรก')" class="bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">🎨 งานอดิเรก</button>
-            </div>
+            <div id="category-filter-container" class="flex flex-wrap gap-2 pb-1 text-[11px]"></div>
 
             <div id="timeline-list" class="space-y-3 min-h-[100px]"></div>
 
@@ -150,14 +153,16 @@
         const editIdInput = document.getElementById('edit-id');
         const searchInput = document.getElementById('search-input');
         const paginationControls = document.getElementById('pagination-controls');
+        const categorySelect = document.getElementById('category');
+        const filterContainer = document.getElementById('category-filter-container');
 
         dateInput.valueAsDate = new Date();
 
-        // ⚙️ ตัวแปรควบคุมระบบแบ่งหน้าและค้นหา
         let currentPage = 1;
-        const itemsPerPage = 10; // แสดงผลหน้าละ 10 บันทึก (ปรับเปลี่ยนเลขนี้ได้ตามใจชอบครับ)
+        const itemsPerPage = 10; 
         let currentCategory = "All";
         let searchQuery = "";
+        let categoriesCache = []; // เก็บหมวดหมู่ที่ดึงมาจาก Supabase
 
         async function checkExistingSession() {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -169,99 +174,99 @@
             document.body.className = "bg-slate-50 text-slate-800 font-sans min-h-screen";
             mainApp.classList.remove('hidden');
             document.getElementById('user-display').innerText = `ผู้ใช้: ${email}`;
-            fetchTotalStars(); // ดึงดาวรวมเพื่ออัปเดตเลเวล
-            fetchData();       // ดึงประวัติแบบแบ่งหน้า
+            
+            // เรียกทำงานชุดข้อมูลเริ่มต้น
+            fetchTotalStars();
+            loadCategoriesSystem(); // โหลดระบบหมวดหมู่แปรผันก่อน
         }
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            const errorEl = document.getElementById('login-error');
-            btn.disabled = true;
-            btn.innerText = "กำลังตรวจสอบ...";
-            errorEl.classList.add('hidden');
-
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                errorEl.classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "เข้าสู่ระบบ 🚀";
-            } else {
-                showMainApp(data.user.email);
-            }
-        });
-
-        async function handleLogout() {
-            await _supabase.auth.signOut();
-            window.location.reload();
-        }
-
-        // ฟังก์ชันคำนวณดาวรวมจากฐานข้อมูลทั้งหมด เพื่อแสดงเลเวลอย่างถูกต้อง
-        async function fetchTotalStars() {
-            const { data, error } = await _supabase.from('achievements').select('stars');
+        // 🔄 ฟังก์ชันโหลดและวาดส่วนของหมวดหมู่ความสำเร็จจากตารางแยก
+        async function loadCategoriesSystem() {
+            const { data, error } = await _supabase.from('categories').select('*').order('name', { ascending: true });
             if (!error && data) {
-                let totalStars = 0;
-                data.forEach(item => totalStars += item.stars);
-                updateLevelDisplay(totalStars);
+                categoriesCache = data;
+                
+                // 1. วาดเมนูตัวเลือก (Dropdown) ในฟอร์มบันทึก
+                categorySelect.innerHTML = '';
+                data.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.innerText = cat.name;
+                    categorySelect.appendChild(opt);
+                });
+
+                // 2. วาดปุ่มตัวกรองด้านล่างไทม์ไลน์
+                renderCategoryFilterButtons();
+                
+                // 3. โหลดประวัติความสำเร็จขึ้นจอ
+                fetchData();
             }
         }
 
-        function updateLevelDisplay(totalStars) {
-            totalStarsEl.innerText = totalStars.toLocaleString(); 
-            const level = Math.floor(totalStars / 1000) + 1;
-            const starsInCurrentLevel = totalStars % 1000; 
-            const progressPercent = (starsInCurrentLevel / 1000) * 100;
-
-            document.getElementById('level-badge').innerText = `Level ${level}`;
-            document.getElementById('current-rank-name').innerText = `ขั้นที่ ${level}`;
-            document.getElementById('progress-text').innerText = `${starsInCurrentLevel.toLocaleString()} / 1,000 ดาว`;
-            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+        function renderCategoryFilterButtons() {
+            filterContainer.innerHTML = '';
+            
+            // ปุ่ม "ทั้งหมด" ตัวหลัก
+            const allActive = currentCategory === "All";
+            filterContainer.innerHTML = `<button onclick="changeCategory('ทั้งหมด')" class="${allActive ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'} px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">ทั้งหมด</button>`;
+            
+            // วาดปุ่มอื่นๆ ตามข้อมูลที่งอกมาจาก Supabase
+            categoriesCache.forEach(cat => {
+                const active = currentCategory === cat.name;
+                const btn = document.createElement('button');
+                btn.innerText = cat.name;
+                btn.className = `${active ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'} px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer`;
+                btn.onclick = () => changeCategory(cat.name);
+                filterContainer.appendChild(btn);
+            });
         }
 
-        // 🔄 หัวใจสำคัญ: ฟังก์ชันดึงข้อมูลแบบเจาะจงเฉพาะหน้า + ค้นหาคำคีย์เวิร์ด
+        // ➕ ฟังก์ชันสั่งเพิ่มหมวดหมู่ใหม่วิ่งเข้าตาราง Supabase ตรงๆ
+        async function addNewCategory() {
+            const input = document.getElementById('new-cat-input');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const { error } = await _supabase.from('categories').insert([{ name: name }]);
+            if (!error) {
+                input.value = '';
+                await loadCategoriesSystem(); // โหลดระบบปุ่มและตัวเลือกใหม่ทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
+            } else {
+                alert("ไม่สามารถเพิ่มหมวดหมู่ได้: " + error.message);
+            }
+        }
+
         async function fetchData() {
             timelineList.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">กำลังโหลดไดอารี่...</div>`;
-            
-            // 1. คำนวณช่วงข้อมูลที่ต้องการดึง (Offset)
             const from = (currentPage - 1) * itemsPerPage;
             const to = from + itemsPerPage - 1;
 
-            // 2. เริ่มสร้างคำสั่ง Query ไปที่ Supabase
             let query = _supabase
                 .from('achievements')
-                .select('*', { count: 'exact' }) // ขอจำนวนแถวทั้งหมดที่ตรงกับเงื่อนไขมาด้วย เพื่อคำนวณเลขหน้า
+                .select('*', { count: 'exact' }) 
                 .order('success_date', { ascending: false })
                 .order('created_at', { ascending: false })
-                .range(from, to); // สั่งดึงเฉพาะช่วงเลขแถวที่กำหนด (แบ่งหน้า)
+                .range(from, to); 
 
-            // 3. ถ้ามีการเลือกหมวดหมู่ ให้กรองเพิ่ม
             if (currentCategory !== "All") {
                 query = query.eq('category', currentCategory);
             }
 
-            // 4. ถ้ามีการพิมพ์ค้นหา ให้กรองคำเพิ่ม
             if (searchQuery.trim() !== "") {
-                query = query.ilike('title', `%${searchQuery}%`); // ilike คือการค้นหาคำโดยไม่สนใจตัวพิมพ์เล็กพิมพ์ใหญ่
+                query = query.ilike('title', `%${searchQuery}%`); 
             }
 
             const { data, error, count } = await query;
-
-            if (error) {
-                timelineList.innerHTML = `<div class="text-center text-red-500 text-sm">โหลดข้อมูลไม่สำเร็จ</div>`;
-                return;
+            if (!error) {
+                renderTimeline(data);
+                renderPaginationControls(count);
             }
-
-            renderTimeline(data);
-            renderPaginationControls(count);
         }
 
         function renderTimeline(data) {
             timelineList.innerHTML = '';
             if (!data || data.length === 0) {
-                timelineList.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">ไม่พบประพัติบันทึกความสำเร็จ</div>`;
+                timelineList.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">ไม่พบประวัติบันทึกความสำเร็จ</div>`;
                 return;
             }
 
@@ -291,14 +296,11 @@
             });
         }
 
-        // 🔢 ฟังก์ชันสำหรับสร้างปุ่มตัวเลขหน้า 1 2 3...
         function renderPaginationControls(totalItems) {
             paginationControls.innerHTML = '';
             const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (totalPages <= 1) return;
 
-            if (totalPages <= 1) return; // ถ้าข้อมูลน้อยมีแค่หน้าเดียว ไม่ต้องแสดงปุ่มเปลี่ยนหน้า
-
-            // ปุ่มก่อนหน้า
             const prevBtn = document.createElement('button');
             prevBtn.innerText = "◀️";
             prevBtn.disabled = currentPage === 1;
@@ -306,20 +308,16 @@
             prevBtn.onclick = () => { currentPage--; fetchData(); };
             paginationControls.appendChild(prevBtn);
 
-            // วนลูปสร้างปุ่มตัวเลขหน้า
             for (let i = 1; i <= totalPages; i++) {
                 const pageBtn = document.createElement('button');
                 pageBtn.innerText = i;
-                if (i === currentPage) {
-                    pageBtn.className = "bg-indigo-600 text-white w-8 h-8 rounded-lg font-bold shadow-xs";
-                } else {
-                    pageBtn.className = "bg-white border border-slate-200 hover:bg-slate-100 w-8 h-8 rounded-lg cursor-pointer text-slate-600";
-                }
+                pageBtn.className = i === currentPage 
+                    ? "bg-indigo-600 text-white w-8 h-8 rounded-lg font-bold shadow-xs"
+                    : "bg-white border border-slate-200 hover:bg-slate-100 w-8 h-8 rounded-lg cursor-pointer text-slate-600";
                 pageBtn.onclick = () => { currentPage = i; fetchData(); };
                 paginationControls.appendChild(pageBtn);
             }
 
-            // ปุ่มถัดไป
             const nextBtn = document.createElement('button');
             nextBtn.innerText = "▶️";
             nextBtn.disabled = currentPage === totalPages;
@@ -328,38 +326,53 @@
             paginationControls.appendChild(nextBtn);
         }
 
-        // ฟังก์ชันทำงานเมื่อกดปุ่มสลับหมวดหมู่ตัวกรอง
         function changeCategory(cat) {
             currentCategory = cat === "ทั้งหมด" ? "All" : cat;
-            currentPage = 1; // สลับหมวดปุ๊บ ให้ย้อนกลับไปเริ่มหน้า 1 เสมอ
-            
-            const btns = document.querySelectorAll('div.flex > button');
-            btns.forEach(b => {
-                const active = b.innerText === cat || (cat === "ทั้งหมด" && b.id === "btn-cat-all");
-                b.className = active 
-                    ? "bg-indigo-600 text-white px-3 py-2 rounded-xl font-medium shadow-xs whitespace-nowrap cursor-pointer"
-                    : "bg-white text-slate-600 border border-slate-200 px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer";
-            });
+            currentPage = 1;
+            renderCategoryFilterButtons();
             fetchData();
         }
 
-        // ระบบจับความเคลื่อนไหวช่องค้นหา (พิมพ์ปุ๊บ ค้นหาให้อัตโนมัติหลังหยุดพิมพ์ 0.3 วินาที เพื่อประหยัดพลังงานฐานข้อมูล)
         let searchTimeout;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 searchQuery = e.target.value;
-                currentPage = 1; // ค้นหาปุ๊บ ให้รีเซ็ตกลับหน้า 1 ทันที
+                currentPage = 1;
                 fetchData();
             }, 300);
         });
 
-        // ระบบบันทึก / อัปเดตข้อมูล
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('login-error');
+            btn.disabled = true; errorEl.classList.add('hidden');
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+            if (error) { errorEl.classList.remove('hidden'); btn.disabled = false; btn.innerText = "เข้าสู่ระบบ 🚀"; }
+            else { showMainApp(data.user.email); }
+        });
+
+        async function handleLogout() { await _supabase.auth.signOut(); window.location.reload(); }
+        async function fetchTotalStars() {
+            const { data, error } = await _supabase.from('achievements').select('stars');
+            if (!error && data) { let totalStars = 0; data.forEach(item => totalStars += item.stars); updateLevelDisplay(totalStars); }
+        }
+        function updateLevelDisplay(totalStars) {
+            totalStarsEl.innerText = totalStars.toLocaleString(); 
+            const level = Math.floor(totalStars / 1000) + 1;
+            const starsInCurrentLevel = totalStars % 1000; 
+            document.getElementById('level-badge').innerText = `Level ${level}`;
+            document.getElementById('current-rank-name').innerText = `ขั้นที่ ${level}`;
+            document.getElementById('progress-text').innerText = `${starsInCurrentLevel.toLocaleString()} / 1,000 ดาว`;
+            document.getElementById('progress-bar').style.width = `${(starsInCurrentLevel / 1000) * 100}%`;
+        }
+
         document.getElementById('star-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('submit-btn');
-            btn.disabled = true;
-
+            const btn = document.getElementById('submit-btn'); btn.disabled = true;
             const id = editIdInput.value;
             const payload = {
                 title: document.getElementById('title').value,
@@ -367,24 +380,13 @@
                 stars: parseInt(document.getElementById('stars').value),
                 success_date: document.getElementById('success-date').value
             };
-
-            const { error } = id 
-                ? await _supabase.from('achievements').update(payload).eq('id', id)
-                : await _supabase.from('achievements').insert([payload]);
-
-            if (!error) {
-                resetForm();
-                await fetchTotalStars();
-                await fetchData();
-            } else {
-                alert("เกิดข้อผิดพลาดในการบันทึก: " + error.message);
-            }
-            btn.disabled = false;
-            btn.innerText = "บันทึกและรับดาว 🚀";
+            const { error } = id ? await _supabase.from('achievements').update(payload).eq('id', id) : await _supabase.from('achievements').insert([payload]);
+            if (!error) { resetForm(); await fetchTotalStars(); await fetchData(); }
+            else { alert("บันทึกไม่สำเร็จ: " + error.message); }
+            btn.disabled = false; btn.innerText = "บันทึกและรับดาว 🚀";
         });
 
         function startEdit(id) {
-            const item = allDataCache = []; // ล้างแคชตัวแปรเก่าเพื่อให้ปลอดภัย
             _supabase.from('achievements').select('*').eq('id', id).single().then(({ data }) => {
                 if (data) {
                     editIdInput.value = data.id;
@@ -392,7 +394,6 @@
                     document.getElementById('category').value = data.category;
                     document.getElementById('stars').value = data.stars;
                     document.getElementById('success-date').value = data.success_date;
-                    
                     document.getElementById('form-title').innerText = "✏️ แก้ไขบันทึกความสำเร็จ";
                     document.getElementById('submit-btn').innerText = "อัปเดตบันทึก 📝";
                     document.getElementById('cancel-edit-btn').classList.remove('hidden');
@@ -400,24 +401,12 @@
                 }
             });
         }
-
         function resetForm() {
-            editIdInput.value = '';
-            document.getElementById('title').value = '';
-            dateInput.valueAsDate = new Date();
-            document.getElementById('form-title').innerText = "✍️ บันทึกความสำเร็จวันนี้";
-            document.getElementById('submit-btn').innerText = "บันทึกและรับดาว 🚀";
+            editIdInput.value = ''; document.getElementById('title').value = ''; dateInput.valueAsDate = new Date();
+            document.getElementById('form-title').innerText = "✍️ บันทึกความสำเร็จวันนี้"; document.getElementById('submit-btn').innerText = "บันทึกและรับดาว 🚀";
             document.getElementById('cancel-edit-btn').classList.add('hidden');
         }
-
-        async function deleteItem(id) {
-            if (confirm("ลบบันทึกนี้ใช่ไหม?")) {
-                await _supabase.from('achievements').delete().eq('id', id);
-                await fetchTotalStars();
-                await fetchData();
-            }
-        }
-
+        async function deleteItem(id) { if (confirm("ลบบันทึกนี้ใช่ไหม?")) { await _supabase.from('achievements').delete().eq('id', id); await fetchTotalStars(); await fetchData(); } }
         document.getElementById('cancel-edit-btn').onclick = resetForm;
         checkExistingSession();
     </script>
