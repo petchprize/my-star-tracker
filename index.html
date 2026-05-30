@@ -6,6 +6,37 @@
     <title>Star Tracker - บันทึกความสำเร็จของฉัน</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 🌟 CSS เพิ่มเติมสำหรับทำภาพกระปุกและดาวที่งอกเพิ่มได้ */
+        #star-jar {
+            position: relative;
+            width: 120px; /* ขนาดกระปุก */
+            height: 140px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.2);
+            border: 4px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px 20px 10px 10px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            overflow: hidden; /* ให้ดาวงอกแค่ในกระปุก */
+        }
+        #star-jar::before { /* ฝากระปุก */
+            content: '';
+            position: absolute;
+            top: 0; left: 15px; right: 15px; height: 15px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 5px 5px 0 0;
+        }
+        .jar-star {
+            position: absolute;
+            color: #fbbf24; /* สี amber-400 */
+            font-size: 14px;
+            opacity: 0;
+            animation: starAppear 0.5s ease-out forwards;
+        }
+        @keyframes starAppear {
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex items-center justify-center">
 
@@ -46,17 +77,21 @@
             </button>
         </div>
 
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-3xl shadow-xl text-center space-y-4">
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-3xl shadow-xl text-center space-y-4 relative">
             <h1 class="text-xl font-medium opacity-90">บันทึกความสำเร็จ</h1>
+            
+            <div id="star-jar" title="กระปุกดาวนำโชคของคุณ!">
+                </div>
+
             <div class="space-y-1">
-                <span id="level-badge" class="bg-white/20 text-xs px-3 py-1 rounded-full font-bold tracking-wider uppercase">Level 1</span>
-                <div class="text-5xl font-black tracking-tight flex justify-center items-center gap-2 pt-2">
+                <span id="level-badge" class="bg-white/20 text-xs px-3 py-1 rounded-full font-bold tracking-wider uppercase">ระดับ 1</span>
+                <div class="text-5xl font-black tracking-tight flex justify-center items-center gap-2 pt-2 relative">
                     <span id="total-stars">0</span> <span class="text-amber-300">⭐</span>
                 </div>
             </div>
             <div class="space-y-1 text-left">
                 <div class="flex justify-between text-xs opacity-80 font-medium">
-                    <span id="current-rank-name">ขั้นที่ 1</span>
+                    <span id="current-rank-name">ระดับที่ 1</span>
                     <span id="progress-text">0 / 1,000 ดาว</span>
                 </div>
                 <div class="w-full bg-white/20 h-3 rounded-full overflow-hidden">
@@ -155,6 +190,7 @@
         const paginationControls = document.getElementById('pagination-controls');
         const categorySelect = document.getElementById('category');
         const filterContainer = document.getElementById('category-filter-container');
+        const starJar = document.getElementById('star-jar');
 
         dateInput.valueAsDate = new Date();
 
@@ -162,7 +198,8 @@
         const itemsPerPage = 10; 
         let currentCategory = "All";
         let searchQuery = "";
-        let categoriesCache = []; // เก็บหมวดหมู่ที่ดึงมาจาก Supabase
+        let categoriesCache = []; 
+        let starsInJarCount = 0; // เก็ยจำนวนดาวปัจจุบันในกระปุก
 
         async function checkExistingSession() {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -175,18 +212,15 @@
             mainApp.classList.remove('hidden');
             document.getElementById('user-display').innerText = `ผู้ใช้: ${email}`;
             
-            // เรียกทำงานชุดข้อมูลเริ่มต้น
             fetchTotalStars();
-            loadCategoriesSystem(); // โหลดระบบหมวดหมู่แปรผันก่อน
+            loadCategoriesSystem(); 
         }
 
-        // 🔄 ฟังก์ชันโหลดและวาดส่วนของหมวดหมู่ความสำเร็จจากตารางแยก
         async function loadCategoriesSystem() {
             const { data, error } = await _supabase.from('categories').select('*').order('name', { ascending: true });
             if (!error && data) {
                 categoriesCache = data;
                 
-                // 1. วาดเมนูตัวเลือก (Dropdown) ในฟอร์มบันทึก
                 categorySelect.innerHTML = '';
                 data.forEach(cat => {
                     const opt = document.createElement('option');
@@ -195,22 +229,16 @@
                     categorySelect.appendChild(opt);
                 });
 
-                // 2. วาดปุ่มตัวกรองด้านล่างไทม์ไลน์
                 renderCategoryFilterButtons();
-                
-                // 3. โหลดประวัติความสำเร็จขึ้นจอ
                 fetchData();
             }
         }
 
         function renderCategoryFilterButtons() {
             filterContainer.innerHTML = '';
-            
-            // ปุ่ม "ทั้งหมด" ตัวหลัก
             const allActive = currentCategory === "All";
             filterContainer.innerHTML = `<button onclick="changeCategory('ทั้งหมด')" class="${allActive ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200'} px-3 py-2 rounded-xl font-medium whitespace-nowrap cursor-pointer">ทั้งหมด</button>`;
             
-            // วาดปุ่มอื่นๆ ตามข้อมูลที่งอกมาจาก Supabase
             categoriesCache.forEach(cat => {
                 const active = currentCategory === cat.name;
                 const btn = document.createElement('button');
@@ -221,7 +249,6 @@
             });
         }
 
-        // ➕ ฟังก์ชันสั่งเพิ่มหมวดหมู่ใหม่วิ่งเข้าตาราง Supabase ตรงๆ
         async function addNewCategory() {
             const input = document.getElementById('new-cat-input');
             const name = input.value.trim();
@@ -230,7 +257,7 @@
             const { error } = await _supabase.from('categories').insert([{ name: name }]);
             if (!error) {
                 input.value = '';
-                await loadCategoriesSystem(); // โหลดระบบปุ่มและตัวเลือกใหม่ทันทีโดยไม่ต้องรีเฟรชหน้าเว็บ
+                await loadCategoriesSystem(); 
             } else {
                 alert("ไม่สามารถเพิ่มหมวดหมู่ได้: " + error.message);
             }
@@ -360,14 +387,66 @@
             const { data, error } = await _supabase.from('achievements').select('stars');
             if (!error && data) { let totalStars = 0; data.forEach(item => totalStars += item.stars); updateLevelDisplay(totalStars); }
         }
+
+        // 🌟 ฟังก์ชันอัปเดตเลเวล และสั่งงอกดาวในกระปุก
         function updateLevelDisplay(totalStars) {
             totalStarsEl.innerText = totalStars.toLocaleString(); 
             const level = Math.floor(totalStars / 1000) + 1;
             const starsInCurrentLevel = totalStars % 1000; 
-            document.getElementById('level-badge').innerText = `Level ${level}`;
-            document.getElementById('current-rank-name').innerText = `ขั้นที่ ${level}`;
+            
+            // แก้ภาษา: ขั้น -> ระดับ
+            document.getElementById('level-badge').innerText = `ระดับ ${level}`;
+            document.getElementById('current-rank-name').innerText = `ระดับที่ ${level}`;
             document.getElementById('progress-text').innerText = `${starsInCurrentLevel.toLocaleString()} / 1,000 ดาว`;
             document.getElementById('progress-bar').style.width = `${(starsInCurrentLevel / 1000) * 100}%`;
+
+            // สั่งงอกดาวในกระปุกตามจำนวนจริง
+            updateStarsInJar(totalStars);
+        }
+
+        // ✨ หัวใจสำคัญ: ฟังก์ชันสั่งงอกดาวเล็กๆ ในกระปุก
+        function updateStarsInJar(totalStars) {
+            // เราจะแสดงดาวในกระปุกตามอัตราส่วน เช่น 1 ดาวจริง = 1 ดาวเล็กในกระปุก (แต่จำกัดสูงสุด 50 ดวงเพื่อความสวยงามและไม่หนักเครื่อง)
+            const targetStarCount = Math.min(totalStars, 50); 
+            
+            if (targetStarCount === starsInJarCount) return; // ถ้าจำนวนดาวเท่าเดิมไม่ต้องทำอะไร
+
+            // ถ้ามีดาวเพิ่ม ให้สั่งงอกดาวใหม่ทีละดวงจนครบ
+            if (targetStarCount > starsInJarCount) {
+                for (let i = starsInJarCount; i < targetStarCount; i++) {
+                    createJarStar();
+                }
+            } 
+            // ถ้ามีดาวลด (เช่น ลบบันทึก) ให้ล้างกระปุกแล้ววาดใหม่ทั้งหมด
+            else {
+                starJar.innerHTML = '';
+                for (let i = 0; i < targetStarCount; i++) {
+                    createJarStar();
+                }
+            }
+            starsInJarCount = targetStarCount; // บันทึกจำนวนดาวล่าสุด
+        }
+
+        // ฟังก์ชันสร้างดาวเล็กๆ 1 ดวงแบบสุ่มตำแหน่งและเวลา
+        function createJarStar() {
+            const star = document.createElement('div');
+            star.innerText = '⭐';
+            star.className = 'jar-star';
+            
+            // สุ่มตำแหน่ง X (ซ้าย-ขวา) ให้อยู่กลางกระปุก
+            const randomX = Math.random() * (120 - 20) + 10; 
+            
+            // สุ่มตำแหน่ง Y (บน-ล่าง) ให้ดาวค่อยๆ ตกไปกองที่ก้นกระปุก
+            // เราจะใช้ CSS Transform: translateY(0) เพื่อให้ดาวตกจากบนลงล่างตาม CSS Animation ที่เขียนไว้
+            const randomY = Math.random() * (140 - 50) + 20; 
+
+            star.style.left = `${randomX}px`;
+            star.style.bottom = `${randomY}px`; // กำหนดตำแหน่ง Y เป็น bottom เพื่อให้ CSS Animation เคลื่อนที่ขึ้น
+
+            // สุ่มเวลาในการเริ่มแอนิเมชั่น เพื่อให้ดาวค่อยๆ โผล่มาทีละดวง
+            star.style.animationDelay = `${Math.random() * 0.5}s`;
+
+            starJar.appendChild(star);
         }
 
         document.getElementById('star-form').addEventListener('submit', async (e) => {
